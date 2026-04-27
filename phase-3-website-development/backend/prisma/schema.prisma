@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  patient
+  doctor
+  admin
+}
+
+enum AppointmentStatus {
+  pending
+  confirmed
+  completed
+  cancelled
+  no_show
+}
+
+model User {
+  id                       Int           @id @default(autoincrement())
+  name                     String
+  email                    String        @unique
+  phone                    String?
+  passwordHash             String
+  role                     Role
+  emailVerified            Boolean       @default(false)
+  emailVerifyToken         String?       @unique
+  emailVerifyTokenExpiresAt DateTime?
+  doctor                   Doctor?
+  appointments             Appointment[] @relation("PatientAppointments")
+  createdAt                DateTime      @default(now())
+}
+
+model Doctor {
+  id             Int                  @id @default(autoincrement())
+  userId         Int                  @unique
+  user           User                 @relation(fields: [userId], references: [id])
+  specialty      String
+  city           String
+  phone          String
+  rating         Float                @default(4.5)
+  availableToday Boolean              @default(true)
+  availability   DoctorAvailability[]
+  appointments   Appointment[]
+}
+
+model DoctorAvailability {
+  id        Int    @id @default(autoincrement())
+  doctorId  Int
+  doctor    Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  weekday   String
+  startTime String
+  endTime   String
+}
+
+model Appointment {
+  id        Int               @id @default(autoincrement())
+  patientId Int
+  doctorId  Int
+  patient   User              @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctor    Doctor            @relation(fields: [doctorId], references: [id])
+  startAt   DateTime
+  notes     String            @default("")
+  status    AppointmentStatus @default(pending)
+  createdAt DateTime          @default(now())
+}
